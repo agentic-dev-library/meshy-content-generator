@@ -1,0 +1,11 @@
+{
+  "release-type": "node",
+  "pull-request-title-pattern": "chore: release ${version}",
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "package-name": "meshy-content-generator",
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}

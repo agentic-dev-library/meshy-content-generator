@@ -27,6 +27,7 @@
     "tasks",
     "lookups",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "exports": {
