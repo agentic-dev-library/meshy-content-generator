@@ -6,6 +6,7 @@
     {
       "id": "concept",
       "task": "text-to-image",
+      "skipArtifacts": true,
       "inputs": [
         { "name": "prompt", "source": "manifest", "path": "textToImageTask.prompt" },
         { "name": "ai_model", "source": "literal", "value": "nano-banana-pro" }
@@ -15,12 +16,14 @@
       "id": "preview",
       "task": "text-to-3d-preview",
       "dependsOn": ["concept"],
+      "skipArtifacts": true,
       "inputs": [{ "name": "prompt", "source": "manifest", "path": "textTo3DPreviewTask.prompt" }]
     },
     {
       "id": "refine",
       "task": "text-to-3d-refine",
       "dependsOn": ["preview"],
+      "skipArtifacts": true,
       "inputs": [
         { "name": "preview_task_id", "source": "step", "step": "preview", "path": "taskId" },
         {
@@ -34,6 +37,7 @@
       "id": "rigging",
       "task": "rigging",
       "dependsOn": ["refine"],
+      "skipArtifacts": true,
       "inputs": [{ "name": "input_task_id", "source": "step", "step": "refine", "path": "taskId" }]
     },
     {

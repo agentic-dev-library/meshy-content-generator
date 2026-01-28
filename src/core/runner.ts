@@ -264,18 +264,21 @@ export class PipelineRunner {
    */
   private async executeTask(step: PipelineStep, context: ExecutionContext): Promise<StepResult> {
     const taskDef = this.getTask(step.task);
+    const shouldDownloadArtifacts = !step.skipArtifacts;
 
     // Check if task already succeeded - skip re-running, just ensure artifacts
     const existingResult = context.stepResults.get(step.id);
     const existing = Array.isArray(existingResult) ? existingResult[0] : existingResult;
     if (existing && existing.status === "SUCCEEDED" && existing.taskId) {
-      this.logger(`\n▶ Step ${step.id} (${taskDef.id}) - already SUCCEEDED, checking artifacts`);
+      this.logger(`\n▶ Step ${step.id} (${taskDef.id}) - already SUCCEEDED${shouldDownloadArtifacts ? ", checking artifacts" : ", skipping artifacts"}`);
 
-      // Check for missing artifacts and download them
-      const missingArtifacts = await this.downloadMissingArtifacts(taskDef, existing, context);
-      if (Object.keys(missingArtifacts).length > 0) {
-        existing.artifacts = { ...existing.artifacts, ...missingArtifacts };
-        this.updateTaskArtifacts(taskDef, existing.artifacts, context);
+      // Check for missing artifacts and download them (unless skipArtifacts is set)
+      if (shouldDownloadArtifacts) {
+        const missingArtifacts = await this.downloadMissingArtifacts(taskDef, existing, context);
+        if (Object.keys(missingArtifacts).length > 0) {
+          existing.artifacts = { ...existing.artifacts, ...missingArtifacts };
+          this.updateTaskArtifacts(taskDef, existing.artifacts, context);
+        }
       }
 
       return existing;
@@ -290,7 +293,11 @@ export class PipelineRunner {
       ...this.mapOutputs(taskDef, result),
       taskId: result.id,
     };
-    const artifacts = await this.downloadArtifacts(taskDef, outputs, context);
+
+    // Download artifacts unless skipArtifacts is set on the step
+    const artifacts = shouldDownloadArtifacts
+      ? await this.downloadArtifacts(taskDef, outputs, context)
+      : {};
 
     this.persistTaskState(taskDef, result, outputs, artifacts, context);
 

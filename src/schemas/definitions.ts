@@ -53,6 +53,8 @@ export const PipelineStepSchema = z.object({
     .optional(),
   inputs: z.array(InputBindingSchema).optional(),
   stateMapping: z.record(z.string(), z.string()).optional(),
+  /** Skip downloading artifacts for this step. Useful for interim pipeline stages. */
+  skipArtifacts: z.boolean().optional(),
 });
 
 export const PipelineDefinitionSchema = z.object({
