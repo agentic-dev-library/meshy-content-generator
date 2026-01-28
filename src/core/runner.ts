@@ -260,9 +260,27 @@ export class PipelineRunner {
 
   /**
    * Execute a single task using the configured provider.
+   * Skips already-succeeded tasks and only downloads missing artifacts.
    */
   private async executeTask(step: PipelineStep, context: ExecutionContext): Promise<StepResult> {
     const taskDef = this.getTask(step.task);
+
+    // Check if task already succeeded - skip re-running, just ensure artifacts
+    const existingResult = context.stepResults.get(step.id);
+    const existing = Array.isArray(existingResult) ? existingResult[0] : existingResult;
+    if (existing && existing.status === "SUCCEEDED" && existing.taskId) {
+      this.logger(`\n▶ Step ${step.id} (${taskDef.id}) - already SUCCEEDED, checking artifacts`);
+
+      // Check for missing artifacts and download them
+      const missingArtifacts = await this.downloadMissingArtifacts(taskDef, existing, context);
+      if (Object.keys(missingArtifacts).length > 0) {
+        existing.artifacts = { ...existing.artifacts, ...missingArtifacts };
+        this.updateTaskArtifacts(taskDef, existing.artifacts, context);
+      }
+
+      return existing;
+    }
+
     const inputs = this.resolveInputs(taskDef, step, context);
 
     this.logger(`\n▶ Step ${step.id} (${taskDef.id})`);
@@ -282,6 +300,108 @@ export class PipelineRunner {
       outputs,
       artifacts,
     };
+  }
+
+  /**
+   * Download artifacts that are missing from an already-succeeded task.
+   * Fetches task details from Meshy API if URLs are not cached in outputs.
+   */
+  private async downloadMissingArtifacts(
+    taskDef: TaskDefinition,
+    existing: StepResult,
+    context: ExecutionContext,
+  ): Promise<Record<string, string>> {
+    const missingArtifacts: Record<string, string> = {};
+
+    // Check which outputs need downloading
+    const outputsNeedingDownload: Array<{ output: (typeof taskDef.outputs)[0]; filename: string; targetPath: string }> = [];
+
+    for (const output of taskDef.outputs) {
+      if (!output.artifact) continue;
+
+      const filename = applyTemplate(output.artifact, {
+        ...context.iterationVars,
+        seed: context.seed,
+        assetId: context.manifest.id,
+      });
+      const targetPath = path.join(context.assetDir, filename);
+
+      if (fs.existsSync(targetPath)) {
+        this.logger(`  ✓ ${filename} already exists`);
+        continue;
+      }
+
+      outputsNeedingDownload.push({ output, filename, targetPath });
+    }
+
+    if (outputsNeedingDownload.length === 0) {
+      return missingArtifacts;
+    }
+
+    // Fetch task details from Meshy API to get download URLs
+    let outputs = existing.outputs;
+    if (existing.taskId) {
+      try {
+        const apiVersion = taskDef.apiVersion ?? "v1";
+        const endpoint = taskDef.endpoint ?? taskDef.id;
+        const fetchPath = `/${apiVersion}/${endpoint}/${existing.taskId}`;
+        const taskDetails = await this.client.get<Record<string, unknown>>(fetchPath);
+
+        // Map the response to outputs
+        // Some APIs return { result: { url: ... } }, others return { model_urls: { glb: ... } }
+        // Wrap in { result: ... } only if the response doesn't already have a result property
+        // AND the responsePath starts with "result."
+        const hasResultProperty = taskDetails && typeof taskDetails === "object" && "result" in taskDetails;
+        outputs = {};
+        for (const output of taskDef.outputs) {
+          let source: Record<string, unknown>;
+          if (output.responsePath.startsWith("result.") && !hasResultProperty) {
+            source = { result: taskDetails };
+          } else {
+            source = taskDetails as Record<string, unknown>;
+          }
+          const value = getPathValue(source, output.responsePath);
+          outputs[output.name] = value;
+        }
+      } catch (err) {
+        this.logger(`  ⚠ Failed to fetch task details: ${err}`);
+        return missingArtifacts;
+      }
+    }
+
+    // Download the files
+    for (const { output, filename, targetPath } of outputsNeedingDownload) {
+      const url = outputs[output.name];
+      if (typeof url === "string" && url.trim()) {
+        this.logger(`  ↓ Downloading ${filename}...`);
+        try {
+          await this.downloadFile(url, targetPath);
+          missingArtifacts[output.name] = filename;
+          this.logger(`  ✓ Downloaded ${filename}`);
+        } catch (err) {
+          this.logger(`  ✗ Failed to download ${filename}: ${err}`);
+        }
+      } else {
+        this.logger(`  ⚠ No URL for ${output.name}`);
+      }
+    }
+
+    return missingArtifacts;
+  }
+
+  /**
+   * Update only the artifacts in manifest task state without overwriting other fields.
+   */
+  private updateTaskArtifacts(
+    taskDef: TaskDefinition,
+    artifacts: Record<string, string>,
+    context: ExecutionContext,
+  ): void {
+    const tasks = context.manifest.tasks ?? {};
+    const state = tasks[taskDef.id];
+    if (state) {
+      state.artifacts = { ...state.artifacts, ...artifacts };
+    }
   }
 
   /**
@@ -374,8 +494,9 @@ export class PipelineRunner {
     result: TaskResult<Record<string, unknown>>,
   ): Record<string, unknown> {
     const outputs: Record<string, unknown> = {};
+    const source = (result.result ?? (result as unknown as Record<string, unknown>)) as Record<string, unknown>;
     for (const output of taskDef.outputs) {
-      const value = getPathValue(result.result, output.responsePath);
+      const value = getPathValue(source, output.responsePath);
       outputs[output.name] = value;
     }
     return outputs;
@@ -394,15 +515,38 @@ export class PipelineRunner {
     for (const output of taskDef.outputs) {
       if (!output.artifact) continue;
       const value = outputs[output.name];
-      if (typeof value !== "string") continue;
-      const filename = applyTemplate(output.artifact, {
-        ...context.iterationVars,
-        seed: context.seed,
-        assetId: context.manifest.id,
-      });
-      const targetPath = path.join(context.assetDir, filename);
-      await this.downloadFile(value, targetPath);
-      artifacts[output.name] = filename;
+      if (typeof value === "string") {
+        if (!value.trim()) continue;
+        const filename = applyTemplate(output.artifact, {
+          ...context.iterationVars,
+          seed: context.seed,
+          assetId: context.manifest.id,
+        });
+        const targetPath = path.join(context.assetDir, filename);
+        await this.downloadFile(value, targetPath);
+        artifacts[output.name] = filename;
+        continue;
+      }
+
+      if (Array.isArray(value)) {
+        let index = 0;
+        for (const item of value) {
+          if (typeof item !== "string" || !item.trim()) {
+            index += 1;
+            continue;
+          }
+          const filename = applyTemplate(output.artifact, {
+            ...context.iterationVars,
+            seed: context.seed,
+            assetId: context.manifest.id,
+            index,
+          });
+          const targetPath = path.join(context.assetDir, filename);
+          await this.downloadFile(item, targetPath);
+          artifacts[`${output.name}.${index}`] = filename;
+          index += 1;
+        }
+      }
     }
 
     return artifacts;
@@ -412,6 +556,7 @@ export class PipelineRunner {
    * Download a single file from URL to a local path.
    */
   private async downloadFile(url: string, targetPath: string): Promise<void> {
+    if (!url || !url.trim()) return;
     const response = await fetch(url);
     if (!response.ok || !response.body) {
       throw new Error(`Failed to download artifact: ${url}`);
@@ -501,6 +646,28 @@ export class PipelineRunner {
 
     const streamPath = `/${apiVersion}/${endpoint}/${taskId}/stream`;
     const result = await this.client.streamUntilComplete<Record<string, unknown>>(streamPath);
-    return { ...result, id: taskId };
+
+    if (result.result) {
+      return { ...result, id: taskId };
+    }
+
+    const fetchPath = `/${apiVersion}/${endpoint}/${taskId}`;
+    const fetched = await this.client.get<Record<string, unknown>>(fetchPath);
+    const fetchedResult =
+      typeof fetched === "object" && fetched !== null && "result" in fetched
+        ? (fetched as { result?: Record<string, unknown> }).result
+        : fetched;
+
+    const combined: TaskResult<Record<string, unknown>> = {
+      ...result,
+      ...(typeof fetched === "object" ? fetched : {}),
+      id: taskId,
+    };
+    const finalResult = fetchedResult ?? result.result;
+    if (typeof finalResult !== "undefined") {
+      combined.result = finalResult;
+    }
+
+    return combined;
   }
 }
