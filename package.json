@@ -1,0 +1,91 @@
+{
+  "name": "meshy-content-generator",
+  "version": "0.1.0",
+  "description": "Declarative Meshy content generation pipelines with a CLI and API.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@10.0.0",
+  "keywords": [
+    "content-generation",
+    "pipeline",
+    "meshy",
+    "cli",
+    "asset-generation"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agentic-dev-library/meshy-content-generator.git"
+  },
+  "homepage": "https://agentic-dev-library.github.io/meshy-content-generator",
+  "author": "Arcade Cabinet",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": [
+    "dist",
+    "pipelines",
+    "tasks",
+    "lookups",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./cli": {
+      "types": "./dist/cli/index.d.ts",
+      "import": "./dist/cli/index.js"
+    }
+  },
+  "bin": {
+    "content-gen": "./dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "check": "biome check .",
+    "dev": "tsx src/api/server.ts",
+    "docs:build": "astro build",
+    "docs:dev": "astro dev",
+    "docs:preview": "astro preview",
+    "lint": "biome check .",
+    "format": "biome format . --write",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:record": "POLLY_MODE=record vitest run",
+    "test:e2e": "playwright test -c e2e/playwright.config.ts",
+    "test:all": "pnpm test:unit && pnpm test:e2e",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^7.3.4",
+    "@fastify/static": "^7.0.4",
+    "@pollyjs/adapter-fetch": "^6.0.7",
+    "@pollyjs/core": "^6.0.6",
+    "@pollyjs/persister-fs": "^6.0.6",
+    "@scalar/fastify-api-reference": "^1.43.17",
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.5",
+    "fastify": "^4.29.1",
+    "seedrandom": "^3.0.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@astrojs/starlight": "^0.37.4",
+    "@biomejs/biome": "^2.3.1",
+    "@playwright/test": "^1.58.0",
+    "@types/node": "^20.11.30",
+    "astro": "^5.16.15",
+    "tsx": "^4.21.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
+  }
+}

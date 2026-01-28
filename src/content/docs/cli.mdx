@@ -1,0 +1,27 @@
+---
+title: CLI
+---
+
+## Commands
+
+### list
+
+```bash
+content-gen list --pipelines ./pipelines/definitions --tasks ./tasks/definitions
+```
+
+### validate
+
+```bash
+content-gen validate ./assets/characters/hero \
+  --pipelines ./pipelines/definitions \
+  --tasks ./tasks/definitions
+```
+
+### run
+
+```bash
+content-gen run character ./assets/characters/hero \
+  --pipelines ./pipelines/definitions \
+  --tasks ./tasks/definitions
+```
