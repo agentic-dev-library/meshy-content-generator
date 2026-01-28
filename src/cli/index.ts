@@ -3,7 +3,9 @@ import { Command } from "commander";
 import dotenv from "dotenv";
 import { loadJsonDefinitions } from "../core/definitions.js";
 import { PipelineRunner } from "../core/runner.js";
+import { validateManifestAndPipeline } from "../core/validator.js";
 import { loadAnimationIds } from "../lookups/animation-ids.js";
+import { readJson } from "../utils/json.js";
 
 const program = new Command();
 
@@ -90,6 +92,41 @@ program
     const exists = await import("node:fs").then((fs) => fs.existsSync(manifestPath));
     if (!exists) {
       throw new Error(`manifest.json not found at ${manifestPath}`);
+    }
+
+    const manifest = readJson(manifestPath);
+    const pipelineNames = Array.from(definitions.pipelines.keys());
+    const pipelineName = opts.pipeline ?? pipelineNames[0];
+    if (!pipelineName) {
+      throw new Error("No pipeline definitions found to validate.");
+    }
+    if (!opts.pipeline && pipelineNames.length > 1) {
+      console.warn(
+        `No pipeline specified; defaulting to '${pipelineName}'. Use --pipeline to choose another.`,
+      );
+    }
+
+    const result = validateManifestAndPipeline({
+      definitions,
+      pipelineName,
+      manifest,
+      lookups: {
+        ANIMATION_IDS: loadAnimationIds(),
+      },
+    });
+
+    if (result.warnings.length > 0) {
+      console.warn("Validation warnings:");
+      for (const warning of result.warnings) {
+        console.warn(`- ${warning}`);
+      }
+    }
+
+    if (result.errors.length > 0) {
+      const message = ["Validation failed:", ...result.errors.map((error) => `- ${error}`)].join(
+        "\n",
+      );
+      throw new Error(message);
     }
 
     console.log("Manifest + definitions validated.");

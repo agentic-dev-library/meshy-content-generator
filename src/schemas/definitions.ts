@@ -46,6 +46,8 @@ export const PipelineStepSchema = z.object({
       source: inputSource,
       path: z.string().optional(),
       step: z.string().optional(),
+      table: z.string().optional(),
+      key: z.string().optional(),
       as: z.string(),
     })
     .optional(),

@@ -107,6 +107,26 @@ export function buildOpenApiSpec() {
     },
   });
 
+  registry.registerPath({
+    method: "get",
+    path: "/file",
+    description: "Serve a file within an asset directory for previewing.",
+    request: {
+      query: z.object({
+        assetDir: z.string(),
+        file: z.string(),
+      }),
+    },
+    responses: {
+      200: {
+        description: "Binary asset file",
+      },
+      404: {
+        description: "File not found",
+      },
+    },
+  });
+
   const generator = new OpenApiGeneratorV3(registry.definitions);
 
   return generator.generateDocument({

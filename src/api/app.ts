@@ -1,7 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import fastifyStatic from "@fastify/static";
 import scalarFastifyApiReference from "@scalar/fastify-api-reference";
 import Fastify from "fastify";
 import { loadJsonDefinitions } from "../core/definitions.js";
@@ -17,12 +16,6 @@ export function buildServer(options?: { cwd?: string }) {
   >();
 
   const cwd = options?.cwd ?? process.cwd();
-
-  app.register(fastifyStatic, {
-    root: cwd,
-    prefix: "/files/",
-    decorateReply: false,
-  });
 
   const openapi = buildOpenApiSpec();
 
@@ -135,8 +128,9 @@ export function buildServer(options?: { cwd?: string }) {
       return;
     }
 
-    const relativePath = path.relative(cwd, absoluteFile).replace(/\\/g, "/");
-    const modelUrl = `/files/${relativePath}`;
+    const modelUrl = `/file?assetDir=${encodeURIComponent(assetDir)}&file=${encodeURIComponent(
+      file,
+    )}`;
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -144,7 +138,7 @@ export function buildServer(options?: { cwd?: string }) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Meshy Preview</title>
-    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <script type="module" src="https://unpkg.com/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
     <style>
       html, body { margin: 0; padding: 0; height: 100%; background: #0b0b12; }
       model-viewer { width: 100%; height: 100%; background: radial-gradient(circle at center, #1c1c2b, #0b0b12); }
@@ -163,6 +157,41 @@ export function buildServer(options?: { cwd?: string }) {
 </html>`;
 
     reply.type("text/html").send(html);
+  });
+
+  app.get("/file", async (request, reply) => {
+    const { assetDir, file } = request.query as { assetDir?: string; file?: string };
+    if (!assetDir || !file) {
+      reply.status(400).send("Missing assetDir or file query parameters.");
+      return;
+    }
+
+    const absoluteAssetDir = path.resolve(cwd, assetDir);
+    const absoluteFile = path.resolve(absoluteAssetDir, file);
+    if (!absoluteFile.startsWith(cwd + path.sep)) {
+      reply.status(400).send("Invalid asset path.");
+      return;
+    }
+
+    if (!fs.existsSync(absoluteFile)) {
+      reply.status(404).send("File not found.");
+      return;
+    }
+
+    const ext = path.extname(absoluteFile).toLowerCase();
+    const contentType =
+      ext === ".glb"
+        ? "model/gltf-binary"
+        : ext === ".gltf"
+          ? "model/gltf+json"
+          : ext === ".png"
+            ? "image/png"
+            : ext === ".jpg" || ext === ".jpeg"
+              ? "image/jpeg"
+              : "application/octet-stream";
+
+    reply.type(contentType);
+    reply.send(fs.createReadStream(absoluteFile));
   });
 
   return app;

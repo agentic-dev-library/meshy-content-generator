@@ -20,3 +20,5 @@ http://localhost:5177/preview?assetDir=./assets/characters/hero&file=model.glb
 - `file` is resolved relative to the asset directory.
 
 The preview uses `<model-viewer>` and supports basic camera controls and lighting out of the box.
+
+The viewer fetches assets through the `/file` endpoint so only the requested file is served.

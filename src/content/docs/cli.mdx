@@ -18,6 +18,12 @@ content-gen validate ./assets/characters/hero \
   --tasks ./tasks/definitions
 ```
 
+Validation checks:
+
+- Manifest schema (required fields and types).
+- Pipeline/task references and step dependencies.
+- Manifest input bindings where possible (env/lookup/manifest/literal).
+
 ### run
 
 ```bash

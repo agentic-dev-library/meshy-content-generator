@@ -31,4 +31,20 @@ describe("API server", () => {
     expect(response.payload).toContain("model-viewer");
     await app.close();
   });
+
+  it("serves asset files via /file", async () => {
+    const tempDir = path.join(baseDir, ".tmp-preview");
+    fs.mkdirSync(tempDir, { recursive: true });
+    const glbPath = path.join(tempDir, "model.glb");
+    fs.writeFileSync(glbPath, "glTF");
+
+    const app = buildServer({ cwd: baseDir });
+    const response = await app.inject({
+      method: "GET",
+      url: `/file?assetDir=${encodeURIComponent(".tmp-preview")}&file=model.glb`,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toContain("model/gltf-binary");
+    await app.close();
+  });
 });

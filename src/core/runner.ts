@@ -214,7 +214,7 @@ export class PipelineRunner {
    */
   private resolveForEachSource(
     source: InputBinding["source"],
-    binding: { path?: string; step?: string },
+    binding: { path?: string; step?: string; table?: string; key?: string },
     context: ExecutionContext,
   ): unknown {
     switch (source) {
@@ -228,7 +228,16 @@ export class PipelineRunner {
       case "env":
         return binding.path ? process.env[binding.path] : undefined;
       case "lookup":
-        return undefined;
+        if (!binding.table) return undefined;
+        if (binding.key) {
+          const resolvedKey = applyTemplate(binding.key, {
+            ...context.iterationVars,
+            seed: context.seed,
+            assetId: context.manifest.id,
+          });
+          return this.lookups[binding.table]?.[resolvedKey];
+        }
+        return Object.values(this.lookups[binding.table] ?? {});
       default:
         return undefined;
     }
