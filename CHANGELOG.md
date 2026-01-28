@@ -1,6 +1,7 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to this project are documented here.
+This file is maintained by release-please and follows Semantic Versioning.
 
 ## [0.1.0] - 2026-01-28
 
