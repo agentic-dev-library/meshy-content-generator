@@ -18,11 +18,12 @@ jobs:
       - id: release
         uses: googleapis/release-please-action@v4
         with:
+          # Use PAT to bypass enterprise restrictions on GITHUB_TOKEN
+          token: ${{ secrets.RELEASE_PAT || github.token }}
           config-file: .github/release-please-config.json
           manifest-file: .github/release-please-manifest.json
-          labels: "autorelease: pending"
       - name: Enable auto-merge for release PR
         if: ${{ steps.release.outputs.pr }}
         run: gh pr merge --auto --squash "${{ steps.release.outputs.pr }}"
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_PAT || github.token }}
