@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 This file is maintained by release-please and follows Semantic Versioning.
 
+## [0.1.2](https://github.com/agentic-dev-library/meshy-content-generator/compare/v0.1.1...v0.1.2) (2026-01-28)
+
+
+### Bug Fixes
+
+* add --repo flag to gh pr merge for non-checkout context ([90d6129](https://github.com/agentic-dev-library/meshy-content-generator/commit/90d61299de7cc976aff840f1e36a322e84a44b52))
+* format code and remove unused import ([275104d](https://github.com/agentic-dev-library/meshy-content-generator/commit/275104d51c7456b8ec7019ca5f5852b35e4e9140))
+* remove pnpm version conflict in workflows ([5ee53f9](https://github.com/agentic-dev-library/meshy-content-generator/commit/5ee53f9cf29720943b0fa27dc4ae9d692aea4f31))
+
 ## [0.1.1](https://github.com/agentic-dev-library/meshy-content-generator/compare/v0.1.0...v0.1.1) (2026-01-28)
 
 
