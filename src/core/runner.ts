@@ -270,7 +270,9 @@ export class PipelineRunner {
     const existingResult = context.stepResults.get(step.id);
     const existing = Array.isArray(existingResult) ? existingResult[0] : existingResult;
     if (existing && existing.status === "SUCCEEDED" && existing.taskId) {
-      this.logger(`\n▶ Step ${step.id} (${taskDef.id}) - already SUCCEEDED${shouldDownloadArtifacts ? ", checking artifacts" : ", skipping artifacts"}`);
+      this.logger(
+        `\n▶ Step ${step.id} (${taskDef.id}) - already SUCCEEDED${shouldDownloadArtifacts ? ", checking artifacts" : ", skipping artifacts"}`,
+      );
 
       // Check for missing artifacts and download them (unless skipArtifacts is set)
       if (shouldDownloadArtifacts) {
@@ -321,7 +323,11 @@ export class PipelineRunner {
     const missingArtifacts: Record<string, string> = {};
 
     // Check which outputs need downloading
-    const outputsNeedingDownload: Array<{ output: (typeof taskDef.outputs)[0]; filename: string; targetPath: string }> = [];
+    const outputsNeedingDownload: Array<{
+      output: (typeof taskDef.outputs)[0];
+      filename: string;
+      targetPath: string;
+    }> = [];
 
     for (const output of taskDef.outputs) {
       if (!output.artifact) continue;
@@ -358,7 +364,8 @@ export class PipelineRunner {
         // Some APIs return { result: { url: ... } }, others return { model_urls: { glb: ... } }
         // Wrap in { result: ... } only if the response doesn't already have a result property
         // AND the responsePath starts with "result."
-        const hasResultProperty = taskDetails && typeof taskDetails === "object" && "result" in taskDetails;
+        const hasResultProperty =
+          taskDetails && typeof taskDetails === "object" && "result" in taskDetails;
         outputs = {};
         for (const output of taskDef.outputs) {
           let source: Record<string, unknown>;
@@ -501,7 +508,10 @@ export class PipelineRunner {
     result: TaskResult<Record<string, unknown>>,
   ): Record<string, unknown> {
     const outputs: Record<string, unknown> = {};
-    const source = (result.result ?? (result as unknown as Record<string, unknown>)) as Record<string, unknown>;
+    const source = (result.result ?? (result as unknown as Record<string, unknown>)) as Record<
+      string,
+      unknown
+    >;
     for (const output of taskDef.outputs) {
       const value = getPathValue(source, output.responsePath);
       outputs[output.name] = value;

@@ -1,5 +1,4 @@
 import path from "node:path";
-import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { loadJsonDefinitions } from "../core/definitions.js";
