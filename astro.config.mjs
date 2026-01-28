@@ -18,6 +18,8 @@ export default defineConfig({
         { label: "Use Cases", link: "/use-cases" },
         { label: "Pipeline Walkthrough", link: "/pipeline-walkthrough" },
         { label: "CI Setup", link: "/ci-setup" },
+        { label: "Meshy Ops", link: "/mesh-ops" },
+        { label: "Troubleshooting", link: "/troubleshooting" },
         { label: "Manifests", link: "/manifest" },
         { label: "Pipelines", link: "/pipelines" },
         { label: "Testing", link: "/testing" },
