@@ -237,7 +237,13 @@ function resolveInput(
 
 function resolveForEachSource(
   source: InputBinding["source"],
-  binding: { path?: string; step?: string; table?: string; key?: string; as?: string },
+  binding: {
+    path?: string | undefined;
+    step?: string | undefined;
+    table?: string | undefined;
+    key?: string | undefined;
+    as?: string | undefined;
+  },
   context: ValidationContext,
   errors: string[],
   warnings: string[],

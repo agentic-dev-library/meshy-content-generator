@@ -13,7 +13,7 @@ Ship Meshy-powered 3D asset pipelines without bespoke scripts. Define pipelines 
 ## Install
 
 ```bash
-pnpm add meshy-content-generator
+pnpm add @agentic-dev-library/meshy-content-generator
 ```
 
 ## Quick start (CLI)
@@ -43,7 +43,7 @@ POLLY_MODE=replay
 ## Programmatic API
 
 ```ts
-import { PipelineRunner, loadJsonDefinitions } from "meshy-content-generator";
+import { PipelineRunner, loadJsonDefinitions } from "@agentic-dev-library/meshy-content-generator";
 
 const definitions = await loadJsonDefinitions({
   pipelinesDir: "./pipelines/definitions",

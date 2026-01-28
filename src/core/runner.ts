@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { Readable } from "node:stream";
+import type { ReadableStream as WebReadableStream } from "node:stream/web";
 import seedrandom from "seedrandom";
 import type { TaskResult } from "../meshy/meshy-client.js";
 import { MeshyClient } from "../meshy/meshy-client.js";
@@ -146,11 +148,13 @@ export class PipelineRunner {
       const state = tasks[step.task];
       if (!state) continue;
       const result: StepResult = {
-        taskId: state.taskId,
         status: state.status ?? "UNKNOWN",
         outputs: state.outputs ?? {},
         artifacts: state.artifacts ?? {},
       };
+      if (state.taskId) {
+        result.taskId = state.taskId;
+      }
       context.stepResults.set(step.id, result);
     }
   }
@@ -208,7 +212,10 @@ export class PipelineRunner {
 
     context.stepResults.set(step.id, results);
     if (results.length > 0) {
-      this.applyStateMappings(pipeline, step, context, results[results.length - 1]);
+      const latest = results[results.length - 1];
+      if (latest) {
+        this.applyStateMappings(pipeline, step, context, latest);
+      }
     }
   }
 
@@ -217,7 +224,12 @@ export class PipelineRunner {
    */
   private resolveForEachSource(
     source: InputBinding["source"],
-    binding: { path?: string; step?: string; table?: string; key?: string },
+    binding: {
+      path?: string | undefined;
+      step?: string | undefined;
+      table?: string | undefined;
+      key?: string | undefined;
+    },
     context: ExecutionContext,
   ): unknown {
     switch (source) {
@@ -350,6 +362,7 @@ export class PipelineRunner {
     const result = context.stepResults.get(stepId);
     if (!result) return undefined;
     const latest = Array.isArray(result) ? result[result.length - 1] : result;
+    if (!latest) return undefined;
     return getPathValue(latest.outputs, pathValue);
   }
 
@@ -406,11 +419,12 @@ export class PipelineRunner {
 
     await fs.promises.mkdir(path.dirname(targetPath), { recursive: true });
     const fileStream = fs.createWriteStream(targetPath);
+    const nodeStream = Readable.fromWeb(response.body as unknown as WebReadableStream);
     await new Promise<void>((resolve, reject) => {
-      response.body
-        ?.pipe(fileStream)
+      nodeStream
+        .pipe(fileStream)
         .on("finish", () => resolve())
-        .on("error", (error) => reject(error));
+        .on("error", (error: Error) => reject(error));
     });
   }
 

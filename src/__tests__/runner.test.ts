@@ -50,7 +50,7 @@ describe("PipelineRunner", () => {
   it("executes a pipeline step and maps outputs", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => ({ ok: true, body: Readable.from(["data"]) })),
+      vi.fn(async () => ({ ok: true, body: ReadableStream.from(["data"]) })),
     );
 
     const definitions = await loadJsonDefinitions({

@@ -192,7 +192,7 @@ export class MeshyClient {
             Authorization: `Bearer ${this.apiKey}`,
             "Content-Type": "application/json",
           },
-          body: body ? JSON.stringify(body) : undefined,
+          body: body ? JSON.stringify(body) : null,
         });
 
         await this.ensureOk(response);
