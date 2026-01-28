@@ -10,11 +10,17 @@ import { getPathValue } from "../utils/object-path.js";
 import { applyTemplate } from "../utils/template.js";
 import type { DefinitionBundle } from "./definitions.js";
 
+/**
+ * Validation errors and warnings produced by the manifest validator.
+ */
 export interface ValidationResult {
   errors: string[];
   warnings: string[];
 }
 
+/**
+ * Options for validating a manifest against a pipeline definition.
+ */
 export interface ValidationOptions {
   definitions: DefinitionBundle;
   pipelineName: string;
@@ -36,6 +42,9 @@ interface ValidationContext {
 
 /**
  * Validate a manifest and its pipeline/task bindings without executing any Meshy calls.
+ */
+/**
+ * Validate a manifest against the pipeline/task definitions without executing Meshy calls.
  */
 export function validateManifestAndPipeline(options: ValidationOptions): ValidationResult {
   const errors: string[] = [];

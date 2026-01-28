@@ -24,6 +24,9 @@ export interface DefinitionLoadOptions {
 
 /**
  * Load and validate pipeline/task definitions from disk.
+ *
+ * @param options - Directory paths for pipeline and task definitions.
+ * @returns Parsed and validated definition bundle.
  */
 export async function loadJsonDefinitions(
   options: DefinitionLoadOptions,

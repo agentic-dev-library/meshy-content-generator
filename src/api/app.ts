@@ -8,6 +8,11 @@ import { PipelineRunner } from "../core/runner.js";
 import { loadAnimationIds } from "../lookups/animation-ids.js";
 import { buildOpenApiSpec, RunRequestSchema } from "./openapi.js";
 
+/**
+ * Build the Fastify server for the content generator API + preview.
+ *
+ * @param options - Server options (defaults to process.cwd()).
+ */
 export function buildServer(options?: { cwd?: string }) {
   const app = Fastify({ logger: true });
   const runs = new Map<

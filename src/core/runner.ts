@@ -71,6 +71,9 @@ export class PipelineRunner {
 
   /**
    * Run a pipeline against the manifest in the provided asset directory.
+   *
+   * @param options - Pipeline execution options.
+   * @returns Updated manifest with task state.
    */
   async run(options: RunOptions): Promise<AssetManifest> {
     const pipeline = this.getPipeline(options.pipelineName);

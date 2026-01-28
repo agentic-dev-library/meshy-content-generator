@@ -80,6 +80,9 @@ export class MeshyClient {
 
   /**
    * Perform a GET request against the Meshy API.
+   *
+   * @param path - API path (e.g. /v1/text-to-image).
+   * @param query - Optional query params.
    */
   async get<T = unknown>(
     path: string,
@@ -90,6 +93,9 @@ export class MeshyClient {
 
   /**
    * Perform a POST request against the Meshy API.
+   *
+   * @param path - API path (e.g. /v2/text-to-3d).
+   * @param body - JSON payload for Meshy.
    */
   async post<T = unknown>(path: string, body: unknown): Promise<T> {
     return this.request<T>("POST", path, body);
@@ -97,6 +103,8 @@ export class MeshyClient {
 
   /**
    * Perform a DELETE request against the Meshy API.
+   *
+   * @param path - API path to delete.
    */
   async delete(path: string): Promise<void> {
     await this.request("DELETE", path);
@@ -104,6 +112,8 @@ export class MeshyClient {
 
   /**
    * Stream task progress (SSE) until completion.
+   *
+   * @param path - Stream endpoint for a Meshy task.
    */
   async streamUntilComplete<T = unknown>(path: string): Promise<TaskResult<T>> {
     const url = this.buildUrl(path);

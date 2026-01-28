@@ -1,12 +1,14 @@
 # meshy-content-generator
 
-Declarative Meshy content generation pipelines with a CLI, API, and preview server.
+Ship Meshy-powered 3D asset pipelines without bespoke scripts. Define pipelines and tasks as JSON, run them from a CLI or API, and preview results instantly.
 
-## Why this exists
+## Why teams adopt it
 
-- **Declarative**: pipelines and tasks are pure JSON; no hard-coded orchestration.
-- **Meshy-first**: optimized for Meshy endpoints (text-to-image, text-to-3d, rigging, animation).
-- **Composable**: run pipelines from CLI, API, or preview server.
+- **Meshy-first**: built around Meshy’s text-to-image, text-to-3D, rigging, and animation endpoints.
+- **Declarative pipelines**: orchestration lives in JSON, not in brittle glue code.
+- **Reusable assets**: one manifest per asset; replay the exact pipeline anytime.
+- **CLI + API + Preview**: run locally, in CI, or embed as a library.
+- **Testable**: VCR recording for Meshy calls, contract tests for OpenAPI.
 
 ## Install
 
@@ -14,14 +16,16 @@ Declarative Meshy content generation pipelines with a CLI, API, and preview serv
 pnpm add meshy-content-generator
 ```
 
-## Quick start
+## Quick start (CLI)
 
 ```bash
 # list built-in pipelines and tasks
 content-gen list --pipelines ./pipelines/definitions --tasks ./tasks/definitions
 
 # validate an asset manifest
-content-gen validate ./assets/characters/hero --pipelines ./pipelines/definitions --tasks ./tasks/definitions
+content-gen validate ./assets/characters/hero \
+  --pipelines ./pipelines/definitions \
+  --tasks ./tasks/definitions
 
 # run a pipeline
 content-gen run character ./assets/characters/hero \
@@ -36,13 +40,10 @@ MESHY_API_KEY=your_api_key
 POLLY_MODE=replay
 ```
 
-## API
+## Programmatic API
 
 ```ts
-import {
-  PipelineRunner,
-  loadJsonDefinitions,
-} from "meshy-content-generator";
+import { PipelineRunner, loadJsonDefinitions } from "meshy-content-generator";
 
 const definitions = await loadJsonDefinitions({
   pipelinesDir: "./pipelines/definitions",
@@ -60,21 +61,7 @@ await runner.run({
 });
 ```
 
-## Concepts
-
-### Pipeline definitions
-
-`pipelines/definitions/*.pipeline.json` describe **orchestration**. Each step references a task and can override inputs.
-
-### Task definitions
-
-`tasks/definitions/*.json` describe **provider calls**. Inputs specify how to resolve values from manifests, previous steps, literals, environment variables, or lookup tables.
-
-### Manifest
-
-Each asset directory contains a `manifest.json` that supplies task inputs and stores task state.
-
-## API + Preview
+## API server + preview
 
 ```bash
 pnpm dev
@@ -83,6 +70,22 @@ pnpm dev
 - API reference: `http://localhost:5177/api`
 - OpenAPI spec: `http://localhost:5177/openapi.json`
 - Preview: `http://localhost:5177/preview?assetDir=./assets/characters/hero&file=model.glb`
+
+The preview loads `@google/model-viewer` from your local install (no CDN).
+
+## Concepts
+
+### Pipeline definitions
+
+`pipelines/definitions/*.pipeline.json` describe **orchestration**. Each step references a task and can override inputs.
+
+### Task definitions
+
+`tasks/definitions/*.json` describe **Meshy calls**. Inputs resolve from manifests, previous steps, literals, env vars, or lookup tables.
+
+### Manifest
+
+Each asset directory contains a `manifest.json` that supplies task inputs and stores task state.
 
 ## Testing
 
@@ -106,9 +109,14 @@ pnpm test
 pnpm build
 ```
 
-## Docs
+## Documentation
 
-- `src/content/docs` for the Astro documentation site content
+The docs site is built with Astro + Starlight. Source content lives in `src/content/docs`.
+
+## Security
+
+- Only serve the API locally unless you add authentication.
+- The preview endpoint serves files only within the working directory.
 
 ## License
 
