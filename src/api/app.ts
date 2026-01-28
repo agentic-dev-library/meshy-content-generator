@@ -245,16 +245,19 @@ export function buildServer(options?: { cwd?: string }) {
     }
 
     const ext = path.extname(absoluteFile).toLowerCase();
-    const contentType =
-      ext === ".glb"
-        ? "model/gltf-binary"
-        : ext === ".gltf"
-          ? "model/gltf+json"
-          : ext === ".png"
-            ? "image/png"
-            : ext === ".jpg" || ext === ".jpeg"
-              ? "image/jpeg"
-              : "application/octet-stream";
+    const allowedTypes: Record<string, string> = {
+      ".glb": "model/gltf-binary",
+      ".gltf": "model/gltf+json",
+      ".png": "image/png",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+    };
+
+    const contentType = allowedTypes[ext];
+    if (!contentType) {
+      reply.status(403).send("File type not allowed.");
+      return;
+    }
 
     reply.type(contentType);
     reply.send(fs.createReadStream(absoluteFile));

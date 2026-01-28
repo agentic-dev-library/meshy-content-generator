@@ -47,4 +47,19 @@ describe("API server", () => {
     expect(response.headers["content-type"]).toContain("model/gltf-binary");
     await app.close();
   });
+
+  it("blocks non-preview file types via /file", async () => {
+    const tempDir = path.join(baseDir, ".tmp-preview");
+    fs.mkdirSync(tempDir, { recursive: true });
+    const txtPath = path.join(tempDir, "notes.txt");
+    fs.writeFileSync(txtPath, "nope");
+
+    const app = buildServer({ cwd: baseDir });
+    const response = await app.inject({
+      method: "GET",
+      url: `/file?assetDir=${encodeURIComponent(".tmp-preview")}&file=notes.txt`,
+    });
+    expect(response.statusCode).toBe(403);
+    await app.close();
+  });
 });
