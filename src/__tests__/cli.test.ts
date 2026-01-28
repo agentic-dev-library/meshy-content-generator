@@ -8,6 +8,10 @@ function runCli(args: string[]) {
   const result = spawnSync("pnpm", ["exec", "tsx", "src/cli/index.ts", ...args], {
     cwd: root,
     encoding: "utf-8",
+    env: {
+      ...process.env,
+      DOTENV_CONFIG_QUIET: "true",
+    },
   });
 
   return {

@@ -30,6 +30,20 @@ export function buildServer(options?: { cwd?: string }) {
       spec: {
         content: openapi,
       },
+      theme: "purple",
+      customCss: `
+        :root {
+          --scalar-color-1: #f3f4f6;
+          --scalar-color-2: #d9dbe1;
+          --scalar-color-3: #b3b8c5;
+          --scalar-color-accent: #8b5cf6;
+          --scalar-color-accent-2: #a78bfa;
+          --scalar-background-1: #0b0b12;
+          --scalar-background-2: #12121c;
+          --scalar-background-3: #171726;
+          font-family: "Space Grotesk", "Inter", system-ui, -apple-system, sans-serif;
+        }
+      `,
     },
   });
 
@@ -138,21 +152,68 @@ export function buildServer(options?: { cwd?: string }) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Meshy Preview</title>
-    <script type="module" src="https://unpkg.com/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+    <script type="module" src="/vendor/model-viewer.min.js"></script>
     <style>
-      html, body { margin: 0; padding: 0; height: 100%; background: #0b0b12; }
-      model-viewer { width: 100%; height: 100%; background: radial-gradient(circle at center, #1c1c2b, #0b0b12); }
+      :root {
+        color-scheme: dark;
+        --accent-low: #2e1065;
+        --accent: #8b5cf6;
+        --accent-high: #ddd6fe;
+        --bg: #0b0b12;
+        --bg-elevated: #12121c;
+        --text: #f3f4f6;
+      }
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Space Grotesk", "Inter", system-ui, -apple-system, sans-serif;
+      }
+      .frame {
+        display: grid;
+        grid-template-rows: auto 1fr;
+        height: 100%;
+        border-top: 1px solid rgba(139, 92, 246, 0.15);
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        background: linear-gradient(90deg, rgba(46, 16, 101, 0.35), rgba(11, 11, 18, 0.95));
+        border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+        font-size: 13px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      header span {
+        color: var(--accent-high);
+      }
+      model-viewer {
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at center, #1c1c2b, #0b0b12);
+      }
     </style>
   </head>
   <body>
-    <model-viewer
-      src="${modelUrl}"
-      camera-controls
-      autoplay
-      exposure="1"
-      shadow-intensity="0.6"
-      ar
-    ></model-viewer>
+    <div class="frame">
+      <header>
+        <span>Meshy Preview</span>
+        <span>•</span>
+        <span>${path.basename(file)}</span>
+      </header>
+      <model-viewer
+        src="${modelUrl}"
+        camera-controls
+        autoplay
+        exposure="1"
+        shadow-intensity="0.6"
+        ar
+      ></model-viewer>
+    </div>
   </body>
 </html>`;
 
@@ -192,6 +253,19 @@ export function buildServer(options?: { cwd?: string }) {
 
     reply.type(contentType);
     reply.send(fs.createReadStream(absoluteFile));
+  });
+
+  app.get("/vendor/model-viewer.min.js", async (_request, reply) => {
+    const vendorPath = path.resolve(
+      cwd,
+      "node_modules/@google/model-viewer/dist/model-viewer.min.js",
+    );
+    if (!fs.existsSync(vendorPath)) {
+      reply.status(404).send("model-viewer asset not found.");
+      return;
+    }
+    reply.type("text/javascript");
+    reply.send(fs.createReadStream(vendorPath));
   });
 
   return app;
