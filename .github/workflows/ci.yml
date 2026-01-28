@@ -18,7 +18,6 @@ permissions:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -42,7 +41,9 @@ jobs:
           pnpm exec playwright install --with-deps
           pnpm test:e2e
       - run: pnpm build
-      - run: pnpm docs:build
+      - name: Build docs
+        run: pnpm docs:build
+        continue-on-error: true  # Docs build has pre-existing zod v4 issue
       # Upload coverage artifacts with unique names based on matrix
       - name: Upload coverage artifact
         if: always()
@@ -52,11 +53,6 @@ jobs:
           path: coverage/
           retention-days: 1
           if-no-files-found: warn
-      # Mark job result
-      - name: Mark job status
-        if: always()
-        run: echo "job_status=${{ job.status }}" >> $GITHUB_OUTPUT
-        id: job_status
 
   coverage-report:
     name: Aggregate Coverage and Report
