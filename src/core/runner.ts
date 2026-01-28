@@ -244,13 +244,16 @@ export class PipelineRunner {
     this.logger(`\n▶ Step ${step.id} (${taskDef.id})`);
     const result = await this.runMeshyTask(taskDef, inputs);
 
-    const outputs = this.mapOutputs(taskDef, result);
+    const outputs = {
+      ...this.mapOutputs(taskDef, result),
+      taskId: result.id,
+    };
     const artifacts = await this.downloadArtifacts(taskDef, outputs, context);
 
     this.persistTaskState(taskDef, result, outputs, artifacts, context);
 
     return {
-      taskId: result.taskId,
+      taskId: result.id,
       status: result.status,
       outputs,
       artifacts,

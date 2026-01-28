@@ -29,7 +29,9 @@ export function createPolly(recordingName: string) {
   });
 
   polly.server.any().on("beforePersist", (_, recording) => {
-    for (const entry of recording.entries) {
+    const entries =
+      Array.isArray(recording.entries) ? recording.entries : (recording as { log?: { entries?: [] } }).log?.entries ?? [];
+    for (const entry of entries) {
       if (entry.request.headers?.authorization) {
         entry.request.headers.authorization = "[REDACTED]";
       }
