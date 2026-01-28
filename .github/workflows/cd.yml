@@ -6,12 +6,25 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
+  pull-requests: write
+  issues: write
 
 jobs:
+  test:
+    name: Run Full CI Tests
+    uses: ./.github/workflows/ci.yml
+    with:
+      run_e2e: true
+
   publish:
+    name: Publish to NPM
+    needs: test
     runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.publish.outputs.published }}
+      commit_sha: ${{ steps.get_commit.outputs.sha }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       # pnpm version is automatically read from the "packageManager" field in package.json
@@ -25,4 +38,121 @@ jobs:
       - run: pnpm install
       - run: pnpm build
       - run: pnpm test
-      - run: npm publish --provenance --access public
+      
+      - name: Get current commit SHA
+        id: get_commit
+        run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+      
+      - name: Publish to NPM
+        id: publish
+        run: |
+          npm publish --provenance --access public
+          echo "published=true" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      
+      - name: Check publish status
+        if: steps.publish.outcome == 'failure'
+        run: exit 1
+
+  handle-failure:
+    name: Handle CD Failure
+    needs: [test, publish]
+    runs-on: ubuntu-latest
+    if: failure()
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Get failed commit info
+        id: commit_info
+        run: |
+          FAILED_SHA=$(git rev-parse HEAD)
+          FAILED_MESSAGE=$(git log -1 --pretty=%B)
+          FAILED_AUTHOR=$(git log -1 --pretty=%an)
+          echo "sha=$FAILED_SHA" >> $GITHUB_OUTPUT
+          echo "message<<EOF" >> $GITHUB_OUTPUT
+          echo "$FAILED_MESSAGE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "author=$FAILED_AUTHOR" >> $GITHUB_OUTPUT
+      
+      - name: Create revert commit
+        id: revert
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git revert --no-edit HEAD
+          REVERT_SHA=$(git rev-parse HEAD)
+          echo "revert_sha=$REVERT_SHA" >> $GITHUB_OUTPUT
+      
+      - name: Create revert PR
+        id: create_pr
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Revert failed release commit ${{ steps.commit_info.outputs.sha }}"
+          branch: revert-failed-release-${{ steps.commit_info.outputs.sha }}
+          title: "Revert failed release: ${{ steps.commit_info.outputs.sha }}"
+          body: |
+            ## Automated Revert PR
+            
+            This PR reverts commit ${{ steps.commit_info.outputs.sha }} which failed during CD.
+            
+            **Failed Commit:** ${{ steps.commit_info.outputs.sha }}
+            **Author:** ${{ steps.commit_info.outputs.author }}
+            **Message:** 
+            ```
+            ${{ steps.commit_info.outputs.message }}
+            ```
+            
+            **Revert Commit:** ${{ steps.revert.outputs.revert_sha }}
+            
+            This PR will auto-merge to restore stability.
+          labels: |
+            revert
+            auto-merge
+            skip-ci
+      
+      - name: Enable auto-merge for revert PR
+        if: steps.create_pr.outputs.pull-request-number
+        run: gh pr merge --auto --squash "${{ steps.create_pr.outputs.pull-request-number }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create issue template
+        run: |
+          cat > /tmp/failure-issue.md << 'EOF'
+          ## CD Failure Report
+          
+          **Failed Commit:** ${{ steps.commit_info.outputs.sha }}
+          **Author:** ${{ steps.commit_info.outputs.author }}
+          **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          
+          ### Commit Message
+          ```
+          ${{ steps.commit_info.outputs.message }}
+          ```
+          
+          ### Revert Information
+          **Revert PR:** #${{ steps.create_pr.outputs.pull-request-number }}
+          **Revert Commit:** ${{ steps.revert.outputs.revert_sha }}
+          
+          ### Failure Context
+          The CD workflow failed during the publish step. Please investigate the logs and fix the issue before attempting another release.
+          
+          **Action Required:**
+          1. Review the workflow logs
+          2. Fix the underlying issue
+          3. Re-run the release process
+          EOF
+      
+      - name: Create failure issue
+        uses: peter-evans/create-issue-from-file@fca9117c27cdc29c6c4db3b86c48e4115a786710 # v6.0.0
+        with:
+          title: "CD Failure: ${{ steps.commit_info.outputs.sha }}"
+          content-filepath: /tmp/failure-issue.md
+          labels: |
+            bug
+            cd-failure
+            automated
