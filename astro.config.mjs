@@ -19,6 +19,8 @@ export default defineConfig({
         { label: "Pipeline Walkthrough", link: "/pipeline-walkthrough" },
         { label: "CI Setup", link: "/ci-setup" },
         { label: "Meshy Ops", link: "/mesh-ops" },
+        { label: "Pricing & Credits", link: "/pricing" },
+        { label: "Rate-Limit Recovery", link: "/rate-limits" },
         { label: "Troubleshooting", link: "/troubleshooting" },
         { label: "Manifests", link: "/manifest" },
         { label: "Pipelines", link: "/pipelines" },
