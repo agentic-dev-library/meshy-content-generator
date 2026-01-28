@@ -1,6 +1,6 @@
 {
   "id": "multi-image-to-3d",
-  "apiVersion": "v2",
+  "apiVersion": "v1",
   "endpoint": "multi-image-to-3d",
   "method": "POST",
   "inputs": [

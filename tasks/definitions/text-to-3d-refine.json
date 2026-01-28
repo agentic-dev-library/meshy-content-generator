@@ -38,8 +38,7 @@
     },
     {
       "name": "model",
-      "responsePath": "result.model_urls.glb",
-      "artifact": "refined.glb"
+      "responsePath": "result.model_urls.glb"
     },
     {
       "name": "textures",
