@@ -26,8 +26,59 @@ jobs:
           cache: pnpm
       - run: pnpm install
       - run: pnpm check
-      - run: pnpm test
+      - run: pnpm test -- --coverage
       - run: pnpm exec playwright install --with-deps
       - run: pnpm test:e2e
       - run: pnpm build
       - run: pnpm docs:build
+      # Upload coverage artifacts with unique names based on matrix
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: coverage-${{ matrix.os }}-node${{ matrix.node-version }}
+          path: coverage/
+          retention-days: 1
+
+  coverage-report:
+    name: Aggregate Coverage and Report
+    needs: build
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      # Download all coverage artifacts
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: coverage-*
+          path: all-coverage
+          merge-multiple: false
+      # Merge coverage reports (use the ubuntu-latest + node 22 as primary)
+      - name: Prepare merged coverage
+        run: |
+          mkdir -p coverage
+          if [ -d "all-coverage/coverage-ubuntu-latest-node22" ]; then
+            cp -r all-coverage/coverage-ubuntu-latest-node22/* coverage/
+          else
+            echo "Primary coverage not found, using first available"
+            first_dir=$(find all-coverage -mindepth 1 -maxdepth 1 -type d | head -n 1)
+            if [ -n "$first_dir" ]; then
+              cp -r "$first_dir"/* coverage/
+            fi
+          fi
+      # Upload to Coveralls
+      - name: Coveralls
+        uses: coverallsapp/github-action@5cbfd81b66ca5d10c19b062c04de0199c215fb6e # v2.3.7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./coverage/lcov.info
+        continue-on-error: true
+      # Upload to SonarCloud
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@ffc3010689be73b8e5ae0c57ce35968afd7909e8 # v5.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        continue-on-error: true
